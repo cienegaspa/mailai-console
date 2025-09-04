@@ -1,13 +1,31 @@
 {
   "name": "mailai-console",
   "version": "1.0.0",
-  "description": "A console application for MailAI",
-  "main": "index.js",
+  "description": "Local Gmail Evidence Console for Attorney Questions",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup": "make setup",
+    "dev": "make dev",
+    "build": "make build",
+    "test": "make test",
+    "clean": "make clean"
   },
-  "keywords": [],
+  "keywords": [
+    "gmail",
+    "ai",
+    "legal",
+    "evidence",
+    "search"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "puppeteer": "^24.18.0"
+  }
 }
