@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { MagnifyingGlassIcon, HomeIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, HomeIcon, AtSymbolIcon } from '@heroicons/react/24/outline'
 
 interface LayoutProps {
   children: ReactNode
@@ -33,6 +33,17 @@ export default function Layout({ children }: LayoutProps) {
               >
                 <HomeIcon className="h-4 w-4" />
                 <span>Runs</span>
+              </Link>
+              <Link
+                to="/accounts"
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
+                  location.pathname === '/accounts'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <AtSymbolIcon className="h-4 w-4" />
+                <span>Accounts</span>
               </Link>
             </nav>
           </div>

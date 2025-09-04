@@ -1,8 +1,26 @@
 """FastAPI main application with SSE support."""
 
+# Load environment variables FIRST, before any other imports
+import os
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    # Look for .env in project root (two levels up from this file)
+    env_path = Path(__file__).parent.parent.parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+        print(f"✅ Loaded environment variables from {env_path}")
+        print(f"✅ MAILAI_MOCKS = {os.getenv('MAILAI_MOCKS', 'NOT_SET')}")
+        client_id = os.getenv('GOOGLE_CLIENT_ID', 'NOT_SET')
+        print(f"✅ GOOGLE_CLIENT_ID = {client_id[:20]}..." if client_id != 'NOT_SET' else "✅ GOOGLE_CLIENT_ID = NOT_SET")
+    else:
+        print(f"⚠️ No .env file found at {env_path}")
+except ImportError:
+    print("⚠️ python-dotenv not installed - using system environment variables only")
+
 import asyncio
 import json
-import os
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 
@@ -26,6 +44,7 @@ from ..providers.interfaces import (
     LLMProvider, VectorStore, BM25Provider
 )
 from ..utils.events import global_event_emitter, global_progress_tracker, RunEvent
+from .auth import router as auth_router
 
 
 # Pydantic models for API
@@ -154,6 +173,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include OAuth router
+app.include_router(auth_router)
 
 
 # Dependency to get orchestrator

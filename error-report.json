@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-09-04T01:37:35.420Z",
+  "error": {
+    "message": "page.waitForTimeout is not a function",
+    "stack": "TypeError: page.waitForTimeout is not a function\n    at diagnoseFrontend (/Users/tom/Projects/mailai-console/diagnose.js:58:20)"
+  },
+  "consoleMessages": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "timestamp": "2025-09-04T01:37:34.755Z"
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "timestamp": "2025-09-04T01:37:34.763Z"
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "timestamp": "2025-09-04T01:37:34.784Z"
+    },
+    {
+      "type": "warn",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "timestamp": "2025-09-04T01:37:34.815Z"
+    },
+    {
+      "type": "warn",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+      "timestamp": "2025-09-04T01:37:34.815Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "timestamp": "2025-09-04T01:37:34.818Z"
+    },
+    {
+      "type": "error",
+      "text": "The above error occurred in the <RunsList> component:\n\n    at RunsList (http://127.0.0.1:5171/src/pages/RunsList.tsx:27:49)\n    at RenderedRoute (http://127.0.0.1:5171/node_modules/.vite/deps/react-router-dom.js?v=9e4cce98:4101:5)\n    at Routes (http://127.0.0.1:5171/node_modules/.vite/deps/react-router-dom.js?v=9e4cce98:4572:5)\n    at main\n    at div\n    at Layout (http://127.0.0.1:5171/src/components/Layout.tsx:20:34)\n    at App\n    at Router (http://127.0.0.1:5171/node_modules/.vite/deps/react-router-dom.js?v=9e4cce98:4515:15)\n    at BrowserRouter (http://127.0.0.1:5171/node_modules/.vite/deps/react-router-dom.js?v=9e4cce98:5264:5)\n    at QueryClientProvider2 (http://127.0.0.1:5171/node_modules/.vite/deps/react-query.js?v=2af08c3b:2663:21)\n\nConsider adding an error boundary to your tree to customize error handling behavior.\nVisit https://reactjs.org/link/error-boundaries to learn more about error boundaries.",
+      "timestamp": "2025-09-04T01:37:34.825Z"
+    }
+  ],
+  "networkErrors": [],
+  "jsErrors": [
+    {
+      "message": "MagnifyingGlassIcon is not defined",
+      "stack": "ReferenceError: MagnifyingGlassIcon is not defined\n    at RunsList (http://127.0.0.1:5171/src/pages/RunsList.tsx:285:32)\n    at renderWithHooks (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:11566:26)\n    at updateFunctionComponent (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:14600:28)\n    at beginWork (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:15942:22)\n    at callCallback2 (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:3672:22)\n    at invokeGuardedCallbackDev (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:3697:24)\n    at invokeGuardedCallback (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:3731:39)\n    at beginWork$1 (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19791:15)\n    at performUnitOfWork (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19224:20)\n    at workLoopSync (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19163:13)",
+      "timestamp": "2025-09-04T01:37:34.824Z"
+    },
+    {
+      "message": "MagnifyingGlassIcon is not defined",
+      "stack": "ReferenceError: MagnifyingGlassIcon is not defined\n    at RunsList (http://127.0.0.1:5171/src/pages/RunsList.tsx:285:32)\n    at renderWithHooks (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:11566:26)\n    at updateFunctionComponent (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:14600:28)\n    at beginWork (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:15942:22)\n    at callCallback2 (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:3672:22)\n    at invokeGuardedCallbackDev (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:3697:24)\n    at invokeGuardedCallback (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:3731:39)\n    at beginWork$1 (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19791:15)\n    at performUnitOfWork (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19224:20)\n    at workLoopSync (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19163:13)",
+      "timestamp": "2025-09-04T01:37:34.825Z"
+    },
+    {
+      "message": "MagnifyingGlassIcon is not defined",
+      "stack": "ReferenceError: MagnifyingGlassIcon is not defined\n    at RunsList (http://127.0.0.1:5171/src/pages/RunsList.tsx:285:32)\n    at renderWithHooks (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:11566:26)\n    at updateFunctionComponent (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:14600:28)\n    at beginWork (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:15942:22)\n    at beginWork$1 (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19779:22)\n    at performUnitOfWork (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19224:20)\n    at workLoopSync (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19163:13)\n    at renderRootSync (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:19142:15)\n    at recoverFromConcurrentError (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:18762:28)\n    at performConcurrentWorkOnRoot (http://127.0.0.1:5171/node_modules/.vite/deps/chunk-IIGOIX66.js?v=923811d1:18710:30)",
+      "timestamp": "2025-09-04T01:37:34.825Z"
+    }
+  ]
+}

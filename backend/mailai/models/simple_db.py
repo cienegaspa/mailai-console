@@ -25,6 +25,40 @@ import os
 Base = declarative_base()
 
 
+class GmailAccount(Base):
+    """Gmail account with OAuth tokens."""
+    __tablename__ = "gmail_accounts"
+    
+    account_id = Column(String, primary_key=True)
+    email = Column(String, unique=True, nullable=False)
+    display_name = Column(String)
+    
+    # OAuth tokens
+    access_token = Column(Text)
+    refresh_token = Column(Text)
+    token_expires_at = Column(DateTime)
+    
+    # Status and metadata
+    status = Column(String, default="disconnected")  # connected, disconnected, error, pending
+    connected_at = Column(DateTime)
+    last_sync = Column(DateTime)
+    sync_error = Column(Text)
+    
+    # Stats
+    total_messages = Column(Integer, default=0)
+    last_message_date = Column(DateTime)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Index for faster lookups
+    __table_args__ = (
+        Index('idx_gmail_accounts_email', 'email'),
+        Index('idx_gmail_accounts_status', 'status'),
+    )
+
+
 class RunStatus(str, Enum):
     """Status of a run."""
     QUEUED = "queued"

@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-09-04T01:57:52.265Z",
+  "pageInfo": {
+    "title": "MailAI Console",
+    "bodyTextLength": 223,
+    "htmlLength": 31403,
+    "reactRootExists": true,
+    "reactRootContentLength": 4018
+  },
+  "consoleMessages": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "timestamp": "2025-09-04T01:57:48.274Z"
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "timestamp": "2025-09-04T01:57:48.282Z"
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "timestamp": "2025-09-04T01:57:48.308Z"
+    },
+    {
+      "type": "warn",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+      "timestamp": "2025-09-04T01:57:48.346Z"
+    },
+    {
+      "type": "warn",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+      "timestamp": "2025-09-04T01:57:48.346Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "timestamp": "2025-09-04T01:57:48.349Z"
+    }
+  ],
+  "networkErrors": [],
+  "jsErrors": [],
+  "bodyText": "MailAI Console\nRuns\nRuns\n\nGmail evidence analysis runs\n\nNew Question\nQUESTION\tSTATUS\tMESSAGES\tTHREADS\tDURATION\tCREATED\tACTIONS\n\n\nWhat were the issues with the CoolSculpting Elite device returns?\n\n\t\nDone\n\t8\t5\t-\t9/4/2025\tView",
+  "reactRootContent": "<div class=\"min-h-screen bg-gray-50\"><header class=\"bg-white border-b border-gray-200\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8\"><div class=\"flex justify-between items-center h-16\"><div class=\"flex items-center\"><a class=\"flex items-center space-x-2\" href=\"/\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" aria-hidden=\"true\" data-slot=\"icon\" class=\"h-8 w-8 text-blue-600\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z\"></path></svg><span class=\"text-xl font-bold text-gray-900\">MailAI Console</span></a></div><nav class=\"flex space-x-4\"><a class=\"flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium bg-blue-100 text-blue-700\" href=\"/\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" aria-hidden=\"true\" data-slot=\"icon\" class=\"h-4 w-4\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25\"></path></svg><span>Runs</span></a></nav></div></div></header><main class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8\"><div class=\"space-y-6\"><div class=\"flex justify-between items-center\"><div><h1 class=\"text-2xl font-bold text-gray-900\">Runs</h1><p class=\"text-gray-600\">Gmail evidence analysis runs</p></div><button class=\"btn-primary flex items-center space-x-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" aria-hidden=\"true\" data-slot=\"icon\" class=\"h-5 w-5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg><span>New Question</span></button></div><div class=\"card overflow-hidden\"><div class=\"overflow-x-auto"
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, AtSymbolIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 
 interface NewRunModalProps {
   isOpen: boolean
@@ -10,6 +10,7 @@ interface NewRunModalProps {
 export default function NewRunModal({ isOpen, onClose, onSubmit }: NewRunModalProps) {
   const [formData, setFormData] = useState({
     question: '',
+    accounts: [] as string[], // Array of selected account IDs
     after: '',
     before: '',
     domains: '',
@@ -17,6 +18,13 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }: NewRunModalPr
     use_api_planner: false,
     polish_with_api: false,
   })
+
+  // Mock connected accounts - will be replaced with real data
+  const connectedAccounts = [
+    { id: '1', email: 'tom@cienegaspa.com', status: 'connected' },
+    { id: '2', email: 'rose@cienegaspa.com', status: 'connected' },
+    { id: '3', email: 'tbwerz@gmail.com', status: 'disconnected' }
+  ]
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +39,7 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }: NewRunModalPr
     // Reset form
     setFormData({
       question: '',
+      accounts: [],
       after: '',
       before: '',
       domains: '',
@@ -70,6 +79,70 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }: NewRunModalPr
                 placeholder="Enter your attorney question..."
                 required
               />
+            </div>
+
+            <div>
+              <label className="label">Gmail Accounts</label>
+              <p className="text-sm text-gray-600 mb-4">
+                <strong>Select accounts to search.</strong> Multiple accounts help ensure complete thread coverage and identify cross-account communications.
+              </p>
+              <div className="space-y-3">
+                {connectedAccounts.map((account) => (
+                  <label 
+                    key={account.id} 
+                    className={`flex items-center p-4 border-2 rounded-xl transition-all duration-200 cursor-pointer ${
+                      formData.accounts.includes(account.id)
+                        ? 'border-blue-200 bg-blue-50 shadow-sm'
+                        : account.status === 'connected'
+                        ? 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.accounts.includes(account.id)}
+                      onChange={(e) => {
+                        const accounts = e.target.checked
+                          ? [...formData.accounts, account.id]
+                          : formData.accounts.filter(id => id !== account.id)
+                        setFormData({ ...formData, accounts })
+                      }}
+                      disabled={account.status !== 'connected'}
+                      className="mr-4 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <div className={`p-2 rounded-full mr-3 ${account.status === 'connected' ? 'bg-green-100' : 'bg-gray-200'}`}>
+                      <AtSymbolIcon className={`h-5 w-5 ${account.status === 'connected' ? 'text-green-600' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">{account.email}</div>
+                      <div className="flex items-center mt-1">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          account.status === 'connected' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {account.status === 'connected' ? '● Connected' : '○ Disconnected'}
+                        </span>
+                      </div>
+                    </div>
+                    {account.status !== 'connected' && (
+                      <ExclamationCircleIcon className="h-5 w-5 text-gray-400" />
+                    )}
+                  </label>
+                ))}
+              </div>
+              {formData.accounts.length === 0 && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700 font-medium">⚠️ Please select at least one account to continue.</p>
+                </div>
+              )}
+              {formData.accounts.length > 0 && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    ✓ {formData.accounts.length} account{formData.accounts.length > 1 ? 's' : ''} selected for comprehensive search
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -150,7 +223,8 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }: NewRunModalPr
               </button>
               <button
                 type="submit"
-                className="btn-primary"
+                disabled={formData.accounts.length === 0}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create Run
               </button>
