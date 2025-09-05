@@ -412,39 +412,136 @@ async def auth_status():
     }
 
 
+@router.get("/debug/simple-messages/{account_id}")
+async def simple_messages_debug(account_id: str):
+    """Ultra-simple endpoint that returns basic message info quickly."""
+    try:
+        from ..models.simple_db import get_session, GmailAccount
+        
+        session = get_session()
+        try:
+            account = session.query(GmailAccount).filter_by(account_id=account_id).first()
+            if not account:
+                return {"error": f"Account {account_id} not found"}
+            
+            # Return basic account info + mock message data to test UI quickly
+            return {
+                "success": True,
+                "account": account.email,
+                "query_used": "simple_test",
+                "total_found": 3,
+                "messages_shown": 3,
+                "messages": [
+                    {
+                        "index": 1,
+                        "gmail_id": "test_001",
+                        "thread_id": "test_thread_001",
+                        "from_email": "test@example.com",
+                        "subject": "Test Message 1 from " + account.email,
+                        "snippet": "This is a test message to verify UI loading works...",
+                        "date": "2025-09-05T10:00:00+00:00",
+                        "account_email": account.email
+                    },
+                    {
+                        "index": 2,
+                        "gmail_id": "test_002", 
+                        "thread_id": "test_thread_002",
+                        "from_email": "another@example.com",
+                        "subject": "Test Message 2 from " + account.email,
+                        "snippet": "Another test message to show multiple results...",
+                        "date": "2025-09-05T11:00:00+00:00",
+                        "account_email": account.email
+                    },
+                    {
+                        "index": 3,
+                        "gmail_id": "test_003",
+                        "thread_id": "test_thread_003", 
+                        "from_email": "third@example.com",
+                        "subject": "Test Message 3 from " + account.email,
+                        "snippet": "Third test message to confirm everything displays correctly...",
+                        "date": "2025-09-05T12:00:00+00:00",
+                        "account_email": account.email
+                    }
+                ]
+            }
+        finally:
+            session.close()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @router.get("/debug/show-messages/{account_id}")
 async def show_messages_debug(account_id: str):
     """Debug endpoint to show actual message data without processing delays."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"🔍 DEBUG ENDPOINT CALLED: show_messages_debug for {account_id}")
+    
     try:
         from ..models.simple_db import get_session, GmailAccount
         from ..providers.gmail_imap import GmailIMAPProvider
         from datetime import datetime, timedelta
         
+        logger.info(f"🔍 Opening database session for {account_id}")
         session = get_session()
         try:
             account = session.query(GmailAccount).filter_by(account_id=account_id).first()
-            if not account or not account.access_token or not account.access_token.startswith("imap:"):
-                return {"error": f"Account {account_id} not found or not configured for IMAP"}
+            if not account:
+                logger.error(f"❌ Account {account_id} not found in database")
+                return {"error": f"Account {account_id} not found"}
             
+            if not account.access_token:
+                logger.error(f"❌ Account {account_id} has no access token")
+                return {"error": f"Account {account_id} not configured"}
+                
+            if not account.access_token.startswith("imap:"):
+                logger.error(f"❌ Account {account_id} has wrong token format: {account.access_token[:10]}...")
+                return {"error": f"Account {account_id} not configured for IMAP"}
+            
+            logger.info(f"✅ Account {account_id} found with IMAP token")
             app_password = account.access_token[5:]  # Remove "imap:" prefix
             
+            logger.info(f"🔍 Creating IMAP provider for {account.email}")
             imap_provider = GmailIMAPProvider(
                 email_address=account.email,
                 app_password=app_password
             )
             
-            # Simple search for last 7 days to ensure we get results
+            # Limit search to last 3 days and only get first 5 messages for UI speed
             today = datetime.utcnow()
-            week_ago = today - timedelta(days=7)
-            query = f"after:{week_ago.strftime('%Y/%m/%d')}"
+            three_days_ago = today - timedelta(days=3)
+            query = f"after:{three_days_ago.strftime('%Y/%m/%d')}"
             
+            logger.info(f"🔍 Searching {account.email} with {query}")
             print(f"🔍 DEBUG: Searching {account.email} with {query}")
+            
             messages = await imap_provider.search(query)
+            logger.info(f"📧 Raw messages found: {len(messages)} from {account.email}")
             print(f"🔍 DEBUG: Raw messages found: {len(messages)}")
             
-            # Convert first few messages to simple dict format
+            if not messages:
+                logger.warning(f"⚠️ No messages found for {account.email}")
+                return {
+                    "success": True,
+                    "account": account.email,
+                    "query_used": query,
+                    "total_found": 0,
+                    "messages_shown": 0,
+                    "messages": []
+                }
+            
+            # Sort by date (most recent first) and take only first 5 for speed
+            logger.info(f"📊 Sorting and limiting messages for {account.email}")
+            if hasattr(messages[0] if messages else None, 'date'):
+                messages = sorted(messages, key=lambda x: x.date, reverse=True)[:5]
+                logger.info(f"✅ Sorted messages by date for {account.email}")
+            else:
+                messages = messages[:5]  # Just take first 5 if sorting fails
+                logger.warning(f"⚠️ Could not sort by date for {account.email}, using first 5")
+            
+            # Convert messages to simple dict format quickly
             result_messages = []
-            for i, msg in enumerate(messages[:3]):  # Just first 3 messages
+            logger.info(f"🔄 Converting {len(messages)} messages to dict format for {account.email}")
+            for i, msg in enumerate(messages):  # Process all found messages (max 5)
                 try:
                     result_messages.append({
                         "index": i + 1,
@@ -463,24 +560,35 @@ async def show_messages_debug(account_id: str):
                         "raw_msg_type": str(type(msg))
                     })
             
-            return {
+            logger.info(f"✅ Successfully processed {len(result_messages)} messages for {account.email}")
+            final_result = {
                 "success": True,
                 "account": account.email,
                 "query_used": query,
-                "total_found": len(messages),
+                "total_found": len(messages) if messages else 0,
                 "messages_shown": len(result_messages),
                 "messages": result_messages
             }
             
+            logger.info(f"🎉 ENDPOINT COMPLETE: {account.email} returning {len(result_messages)} messages")
+            return final_result
+            
         finally:
+            logger.info(f"🔒 Closing database session for {account_id}")
             session.close()
             
     except Exception as e:
         import traceback
+        error_msg = str(e)
+        full_traceback = traceback.format_exc()
+        logger.error(f"❌ ENDPOINT ERROR for {account_id}: {error_msg}")
+        logger.error(f"❌ Full traceback: {full_traceback}")
+        
         return {
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "account": account_id,
+            "error": error_msg,
+            "traceback": full_traceback
         }
 
 
