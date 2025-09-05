@@ -506,19 +506,20 @@ async def show_messages_debug(account_id: str):
                 app_password=app_password
             )
             
-            # Limit search to last 3 days and only get first 5 messages for UI speed
+            # Search last 30 days to get more meaningful results
             today = datetime.utcnow()
-            three_days_ago = today - timedelta(days=3)
-            query = f"after:{three_days_ago.strftime('%Y/%m/%d')}"
+            thirty_days_ago = today - timedelta(days=30)
+            query = f"after:{thirty_days_ago.strftime('%Y/%m/%d')}"
             
             logger.info(f"🔍 Searching {account.email} with {query}")
             print(f"🔍 DEBUG: Searching {account.email} with {query}")
             
-            messages = await imap_provider.search(query)
-            logger.info(f"📧 Raw messages found: {len(messages)} from {account.email}")
-            print(f"🔍 DEBUG: Raw messages found: {len(messages)}")
+            # First search for message metadata
+            message_metas = await imap_provider.search(query)
+            logger.info(f"📧 Raw messages found: {len(message_metas)} from {account.email}")
+            print(f"🔍 DEBUG: Raw messages found: {len(message_metas)}")
             
-            if not messages:
+            if not message_metas:
                 logger.warning(f"⚠️ No messages found for {account.email}")
                 return {
                     "success": True,
@@ -529,30 +530,39 @@ async def show_messages_debug(account_id: str):
                     "messages": []
                 }
             
-            # Sort by date (most recent first) and take only first 5 for speed
-            logger.info(f"📊 Sorting and limiting messages for {account.email}")
-            if hasattr(messages[0] if messages else None, 'date'):
-                messages = sorted(messages, key=lambda x: x.date, reverse=True)[:5]
-                logger.info(f"✅ Sorted messages by date for {account.email}")
+            # Sort by date (most recent first) and take only 3 for quick testing
+            logger.info(f"📊 Sorting and limiting message metas for {account.email}")
+            if hasattr(message_metas[0] if message_metas else None, 'date'):
+                sorted_metas = sorted(message_metas, key=lambda x: x.date, reverse=True)[:3]
+                logger.info(f"✅ Sorted message metas by date for {account.email}")
             else:
-                messages = messages[:5]  # Just take first 5 if sorting fails
-                logger.warning(f"⚠️ Could not sort by date for {account.email}, using first 5")
+                sorted_metas = message_metas[:3]  # Just take first 3 for quick testing
+                logger.warning(f"⚠️ Could not sort by date for {account.email}, using first 3")
+            
+            # Now fetch full message bodies
+            message_ids = [meta.gmail_id for meta in sorted_metas]
+            logger.info(f"📥 Fetching full bodies for {len(message_ids)} messages from {account.email}")
+            messages = await imap_provider.fetch_bodies(message_ids)
+            logger.info(f"✅ Fetched {len(messages)} full messages with bodies for {account.email}")
             
             # Convert messages to simple dict format quickly
             result_messages = []
             logger.info(f"🔄 Converting {len(messages)} messages to dict format for {account.email}")
-            for i, msg in enumerate(messages):  # Process all found messages (max 5)
+            for i, msg in enumerate(messages):
                 try:
-                    result_messages.append({
+                    logger.info(f"   📧 Processing message {i+1}: {msg.subject[:30] if hasattr(msg, 'subject') else 'No subject'}...")
+                    message_dict = {
                         "index": i + 1,
                         "gmail_id": msg.gmail_id,
                         "thread_id": msg.thread_id, 
                         "from_email": msg.from_email,
                         "subject": msg.subject[:100] if msg.subject else "(No subject)",
-                        "snippet": msg.snippet[:200] if msg.snippet else "",
+                        "snippet": msg.body[:500] if msg.body else (msg.snippet[:200] if msg.snippet else ""),
                         "date": msg.date.isoformat() if hasattr(msg.date, 'isoformat') else str(msg.date),
                         "account_email": account.email
-                    })
+                    }
+                    result_messages.append(message_dict)
+                    logger.info(f"   ✅ Message {i+1} processed successfully")
                 except Exception as e:
                     result_messages.append({
                         "index": i + 1,
