@@ -39,12 +39,15 @@ from ..providers.mock import (
     MockGmailProvider, MockEmbedProvider, MockRerankProvider, 
     MockLLMProvider, MockVectorStore, MockBM25Provider
 )
+from ..providers.gmail_oauth import GmailOAuthProvider
+from ..providers.gmail_imap import GmailIMAPProvider
 from ..providers.interfaces import (
     GmailProvider, EmbedProvider, RerankProvider,
     LLMProvider, VectorStore, BM25Provider
 )
 from ..utils.events import global_event_emitter, global_progress_tracker, RunEvent
 from .auth import router as auth_router
+from .debug import router as debug_router
 
 
 # Pydantic models for API
@@ -121,9 +124,9 @@ async def initialize_providers():
     """Initialize providers based on configuration."""
     global providers, orchestrator
     
-    use_mocks = os.getenv("MAILAI_MOCKS", "true").lower() == "true"
+    gmail_mode = os.getenv("MAILAI_GMAIL_MODE", "mock").lower()
     
-    if use_mocks:
+    if gmail_mode == "mock":
         print("Initializing with mock providers...")
         providers = {
             "gmail": MockGmailProvider(),
@@ -133,9 +136,66 @@ async def initialize_providers():
             "vector": MockVectorStore(),
             "bm25": MockBM25Provider()
         }
+    elif gmail_mode == "oauth":
+        print("Initializing with Gmail OAuth provider...")
+        
+        # Initialize Gmail OAuth provider
+        client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
+        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:5170/auth/callback')
+        
+        if client_id and client_secret:
+            gmail_provider = GmailOAuthProvider(
+                client_id=client_id,
+                client_secret=client_secret, 
+                redirect_uri=redirect_uri
+            )
+            print("✅ Gmail OAuth provider initialized")
+        else:
+            print("⚠️ Gmail OAuth credentials not found, falling back to mock provider")
+            gmail_provider = MockGmailProvider()
+        
+        # TODO: Add real AI providers (embeddings, LLM, reranker)
+        # For now, use mock providers for AI services
+        providers = {
+            "gmail": gmail_provider,
+            "embed": MockEmbedProvider(),
+            "rerank": MockRerankProvider(),
+            "llm": MockLLMProvider(),
+            "vector": MockVectorStore(),
+            "bm25": MockBM25Provider()
+        }
+    
+    elif gmail_mode == "imap":
+        print("Initializing with Gmail IMAP provider...")
+        
+        # Initialize Gmail IMAP provider
+        imap_email = os.getenv('GMAIL_IMAP_EMAIL', '')
+        imap_password = os.getenv('GMAIL_IMAP_APP_PASSWORD', '')
+        
+        if imap_email and imap_password:
+            gmail_provider = GmailIMAPProvider(
+                email_address=imap_email,
+                app_password=imap_password
+            )
+            print(f"✅ Gmail IMAP provider initialized for {imap_email}")
+        else:
+            print("⚠️ Gmail IMAP credentials not found, falling back to mock provider")
+            gmail_provider = MockGmailProvider()
+        
+        # TODO: Add real AI providers (embeddings, LLM, reranker)
+        # For now, use mock providers for AI services
+        providers = {
+            "gmail": gmail_provider,
+            "embed": MockEmbedProvider(),
+            "rerank": MockRerankProvider(),
+            "llm": MockLLMProvider(),
+            "vector": MockVectorStore(),
+            "bm25": MockBM25Provider()
+        }
+    
     else:
-        # TODO: Initialize real providers
-        print("Real providers not implemented yet, falling back to mocks...")
+        print(f"⚠️ Unknown Gmail mode '{gmail_mode}', falling back to mock providers")
         providers = {
             "gmail": MockGmailProvider(),
             "embed": MockEmbedProvider(),
@@ -176,6 +236,7 @@ app.add_middleware(
 
 # Include OAuth router
 app.include_router(auth_router)
+app.include_router(debug_router)
 
 
 # Dependency to get orchestrator

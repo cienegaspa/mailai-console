@@ -6,9 +6,12 @@ import {
   ExclamationCircleIcon,
   TrashIcon,
   AtSymbolIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import ConnectIMAPModal from '../components/ConnectIMAPModal'
+import RecentMessagesViewer from '../components/RecentMessagesViewer'
 
 interface GmailAccount {
   account_id: string
@@ -99,6 +102,8 @@ const syncAccount = async (accountId: string): Promise<void> => {
 
 export default function Accounts() {
   const [isConnecting, setIsConnecting] = useState(false)
+  const [showIMAPModal, setShowIMAPModal] = useState(false)
+  const [showMessagesViewer, setShowMessagesViewer] = useState(false)
   const queryClient = useQueryClient()
 
   // Real API query
@@ -113,15 +118,13 @@ export default function Accounts() {
   )
 
   const handleConnectAccount = async () => {
-    setIsConnecting(true)
-    try {
-      const authUrl = await connectAccount()
-      // Redirect to Google OAuth
-      window.location.href = authUrl
-    } catch (error) {
-      toast.error('Failed to start account connection')
-      setIsConnecting(false)
-    }
+    // For now, always use IMAP (simpler than OAuth)
+    setShowIMAPModal(true)
+  }
+  
+  const handleIMAPSuccess = (email: string) => {
+    toast.success(`Successfully connected ${email}`)
+    queryClient.invalidateQueries('gmail-accounts')
   }
 
   const handleDisconnectAccount = async (accountId: string, email: string) => {
@@ -199,32 +202,41 @@ export default function Accounts() {
           </p>
         </div>
         
-        <button
-          onClick={handleConnectAccount}
-          disabled={isConnecting}
-          className="btn-primary flex items-center space-x-2"
-        >
-          {isConnecting ? (
-            <ArrowPathIcon className="h-5 w-5 animate-spin" />
-          ) : (
-            <PlusIcon className="h-5 w-5" />
-          )}
-          <span>{isConnecting ? 'Connecting...' : 'Connect Account'}</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowMessagesViewer(true)}
+            className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 flex items-center space-x-2"
+          >
+            <EnvelopeIcon className="h-5 w-5" />
+            <span>View Messages</span>
+          </button>
+          <button
+            onClick={handleConnectAccount}
+            disabled={isConnecting}
+            className="btn-primary flex items-center space-x-2"
+          >
+            {isConnecting ? (
+              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+            ) : (
+              <PlusIcon className="h-5 w-5" />
+            )}
+            <span>{isConnecting ? 'Connecting...' : 'Connect Account'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* OAuth Setup Notice */}
+      {/* IMAP Setup Notice */}
       {(!accounts || accounts.length === 0) && (
-        <div className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm">
+        <div className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 shadow-sm">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0">
-              <ExclamationCircleIcon className="h-6 w-6 text-blue-600" />
+              <CheckCircleIcon className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-blue-800">Setup Required</h4>
-              <p className="text-sm text-blue-700 mt-1">
-                To connect Gmail accounts, you need to configure Google OAuth credentials.
-                <span className="font-medium"> Check the setup instructions below.</span>
+              <h4 className="text-sm font-semibold text-green-800">Simple Setup</h4>
+              <p className="text-sm text-green-700 mt-1">
+                Connect your Gmail with just your email and a 2-minute app password setup.
+                <span className="font-medium"> No Google Cloud Console or verification required!</span>
               </p>
             </div>
           </div>
@@ -321,6 +333,9 @@ export default function Accounts() {
             <p className="mt-1 text-sm text-gray-500">
               Connect your Gmail accounts to start analyzing email evidence.
             </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Uses simple IMAP connection - no complex OAuth setup required!
+            </p>
             <div className="mt-6">
               <button
                 onClick={handleConnectAccount}
@@ -381,6 +396,19 @@ export default function Accounts() {
           </div>
         </div>
       )}
+      
+      {/* IMAP Connection Modal */}
+      <ConnectIMAPModal 
+        isOpen={showIMAPModal}
+        onClose={() => setShowIMAPModal(false)}
+        onSuccess={handleIMAPSuccess}
+      />
+      
+      {/* Recent Messages Viewer */}
+      <RecentMessagesViewer
+        isOpen={showMessagesViewer}
+        onClose={() => setShowMessagesViewer(false)}
+      />
     </div>
   )
 }

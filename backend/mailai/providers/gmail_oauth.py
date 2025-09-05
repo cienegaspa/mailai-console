@@ -62,6 +62,7 @@ class GmailOAuthProvider(GmailProvider):
     
     async def handle_oauth_callback(self, authorization_response: str) -> Dict[str, Any]:
         """Handle OAuth callback and store credentials."""
+        logger.info(f"🔵 OAuth callback started with response: {authorization_response[:100]}...")
         try:
             # Use exact same client config format as create_auth_url
             client_config = {
@@ -80,26 +81,35 @@ class GmailOAuthProvider(GmailProvider):
             flow.redirect_uri = self.redirect_uri
             
             # Exchange authorization code for tokens
+            logger.info("🔵 Exchanging authorization code for tokens...")
             flow.fetch_token(authorization_response=authorization_response)
             credentials = flow.credentials
+            logger.info(f"🔵 Tokens received - Access token: {bool(credentials.token)}, Refresh token: {bool(credentials.refresh_token)}")
             
             # Get user email from Gmail API
+            logger.info("🔵 Getting user profile from Gmail API...")
             service = build('gmail', 'v1', credentials=credentials)
             profile = service.users().getProfile(userId='me').execute()
             email = profile['emailAddress']
+            logger.info(f"🔵 Gmail profile retrieved for: {email}")
             
             # Store account in database
+            logger.info(f"🔵 Storing account in database: {email}")
             session = get_session()
             try:
                 account = session.query(GmailAccount).filter_by(email=email).first()
                 if not account:
+                    logger.info(f"🔵 Creating new account for: {email}")
                     account = GmailAccount(
                         account_id=email,  # Use email as account ID for simplicity
                         email=email
                     )
                     session.add(account)
+                else:
+                    logger.info(f"🔵 Updating existing account for: {email}")
                 
                 # Update OAuth tokens
+                logger.info(f"🔵 Setting account status to 'connected' and storing tokens...")
                 account.access_token = credentials.token
                 account.refresh_token = credentials.refresh_token
                 account.token_expires_at = credentials.expiry
@@ -107,7 +117,9 @@ class GmailOAuthProvider(GmailProvider):
                 account.connected_at = datetime.utcnow()
                 account.sync_error = None
                 
+                logger.info(f"🔵 Committing database changes...")
                 session.commit()
+                logger.info(f"✅ Account {email} successfully stored as 'connected'")
                 
                 return {
                     "success": True,
@@ -119,7 +131,8 @@ class GmailOAuthProvider(GmailProvider):
                 session.close()
                 
         except Exception as e:
-            logger.error(f"OAuth callback error: {e}")
+            logger.error(f"❌ OAuth callback error: {e}")
+            logger.exception("Full OAuth callback error traceback:")
             return {
                 "success": False,
                 "error": str(e)

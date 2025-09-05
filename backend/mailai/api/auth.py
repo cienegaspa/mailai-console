@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from ..providers.gmail_oauth import GmailOAuthProvider
+from ..providers.gmail_imap import GmailIMAPProvider
 from ..models.simple_db import get_session, GmailAccount
 
 router = APIRouter()
@@ -27,6 +28,18 @@ gmail_provider = GmailOAuthProvider(
 class ConnectAccountResponse(BaseModel):
     auth_url: str
     state: str
+
+
+class ConnectIMAPRequest(BaseModel):
+    email: str
+    app_password: str
+
+
+class ConnectIMAPResponse(BaseModel):
+    success: bool
+    message: str
+    email: Optional[str] = None
+    error: Optional[str] = None
 
 
 class AccountInfo(BaseModel):
@@ -72,9 +85,46 @@ async def connect_account():
     )
 
 
+@router.post("/auth/connect-imap", response_model=ConnectIMAPResponse)
+async def connect_imap_account(request: ConnectIMAPRequest):
+    """Connect Gmail account using IMAP with app password."""
+    try:
+        # Create IMAP provider
+        imap_provider = GmailIMAPProvider(
+            email_address=request.email,
+            app_password=request.app_password
+        )
+        
+        # Test connection and store account
+        result = await imap_provider.connect_account()
+        
+        if result["success"]:
+            return ConnectIMAPResponse(
+                success=True,
+                message=f"Successfully connected {request.email} via IMAP",
+                email=request.email
+            )
+        else:
+            return ConnectIMAPResponse(
+                success=False,
+                message="IMAP connection failed",
+                error=result["error"]
+            )
+            
+    except Exception as e:
+        return ConnectIMAPResponse(
+            success=False,
+            message="IMAP connection failed", 
+            error=str(e)
+        )
+
+
 @router.get("/auth/callback")
 async def oauth_callback(request: Request):
     """Handle OAuth callback from Google."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"🔵 OAuth callback received with URL: {request.url}")
     try:
         # Check if we're in mock mode
         import os
@@ -116,22 +166,29 @@ async def oauth_callback(request: Request):
         
         # Get the full callback URL
         authorization_response = str(request.url)
+        logger.info(f"🔵 Processing OAuth callback with authorization_response: {authorization_response}")
         
         # Handle the OAuth callback
+        logger.info("🔵 Calling gmail_provider.handle_oauth_callback...")
         result = await gmail_provider.handle_oauth_callback(authorization_response)
+        logger.info(f"🔵 OAuth callback result: {result}")
         
         if result["success"]:
             # Redirect to frontend with success
+            logger.info(f"✅ OAuth successful for {result['email']}, redirecting to frontend")
             return RedirectResponse(
                 url=f"http://127.0.0.1:5171/accounts?connected={result['email']}"
             )
         else:
             # Redirect to frontend with error
+            logger.error(f"❌ OAuth failed: {result['error']}, redirecting to frontend with error")
             return RedirectResponse(
                 url=f"http://127.0.0.1:5171/accounts?error={result['error']}"
             )
             
     except Exception as e:
+        logger.error(f"❌ OAuth callback exception: {e}")
+        logger.exception("Full OAuth callback exception traceback:")
         return RedirectResponse(
             url=f"http://127.0.0.1:5171/accounts?error=OAuth callback failed: {str(e)}"
         )
@@ -145,6 +202,94 @@ async def list_accounts():
         return [AccountInfo(**account) for account in accounts]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/accounts/recent-messages")
+async def get_all_recent_messages(days: int = 1, limit_per_account: int = 10):
+    """Get recent messages from all connected accounts."""
+    print(f"🔵 get_all_recent_messages called with days={days}, limit_per_account={limit_per_account}")
+    print("🔵 Entered get_all_recent_messages function")
+    try:
+        # Get accounts directly from database instead of using OAuth provider
+        from ..models.simple_db import get_session, GmailAccount
+        
+        session = get_session()
+        try:
+            accounts = session.query(GmailAccount).filter_by(status="connected").all()
+            all_messages = []
+            
+            for account in accounts:
+                try:
+                    print(f"🔵 Fetching messages from {account.email}...")
+                    
+                    # Extract app password from stored token
+                    if not account.access_token or not account.access_token.startswith("imap:"):
+                        print(f"⚠️ Account {account.email} not configured for IMAP access")
+                        continue
+                    
+                    app_password = account.access_token[5:]  # Remove "imap:" prefix
+                    
+                    # Create IMAP provider for this account
+                    from ..providers.gmail_imap import GmailIMAPProvider
+                    from datetime import datetime, timedelta
+                    
+                    imap_provider = GmailIMAPProvider(
+                        email_address=account.email,
+                        app_password=app_password
+                    )
+                    
+                    # Use Gmail format that works: after:YYYY/MM/DD (from logs showing success)
+                    from datetime import datetime, timedelta
+                    today = datetime.utcnow()
+                    start_date = today - timedelta(days=days)
+                    
+                    # Use proven Gmail format: after:YYYY/MM/DD (logs show this finds messages)
+                    query = f"after:{start_date.strftime('%Y/%m/%d')}"
+                    print(f"🔵 Searching {account.email} with Gmail query: {query}")
+                    print(f"🔵 Date range: after {start_date.strftime('%Y/%m/%d')} (last {days} days)")
+                    
+                    messages = await imap_provider.search(query)
+                    
+                    # Limit and sort by date (most recent first)
+                    messages = sorted(messages, key=lambda x: x.date, reverse=True)[:limit_per_account]
+                    print(f"🔵 Found {len(messages)} messages from {account.email}")
+                    
+                    # Convert to dict for JSON response
+                    for msg in messages:
+                        all_messages.append({
+                            "gmail_id": msg.gmail_id,
+                            "thread_id": msg.thread_id,
+                            "date": msg.date.isoformat(),
+                            "from_email": msg.from_email,
+                            "subject": msg.subject,
+                            "snippet": msg.snippet,
+                            "account_email": account.email
+                        })
+                    
+                except Exception as e:
+                    # Continue with other accounts if one fails
+                    print(f"Failed to fetch messages from {account.email}: {e}")
+                    continue
+            
+            # Sort all messages by date (most recent first)
+            all_messages = sorted(all_messages, key=lambda x: x["date"], reverse=True)
+            
+            return {
+                "total_accounts": len(accounts),
+                "total_messages": len(all_messages),
+                "messages": all_messages
+            }
+            
+        finally:
+            session.close()
+        
+    except Exception as e:
+        import traceback
+        error_details = f"Failed to fetch all messages: {str(e)}"
+        full_traceback = traceback.format_exc()
+        print(f"❌ Full error in get_all_recent_messages: {error_details}")
+        print(f"❌ Traceback: {full_traceback}")
+        raise HTTPException(status_code=500, detail=error_details)
 
 
 @router.get("/accounts/{account_id}", response_model=AccountInfo)
@@ -188,6 +333,74 @@ async def sync_account(account_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/accounts/{account_id}/recent-messages")
+async def get_recent_messages(account_id: str, days: int = 1, limit: int = 20):
+    """Get recent messages from a specific account."""
+    try:
+        from datetime import datetime, timedelta
+        from ..providers.gmail_imap import GmailIMAPProvider
+        from ..models.simple_db import get_session, GmailAccount
+        
+        # Get account credentials
+        session = get_session()
+        try:
+            account = session.query(GmailAccount).filter_by(account_id=account_id).first()
+            if not account or account.status != "connected":
+                raise HTTPException(status_code=404, detail="Account not found or not connected")
+            
+            # Extract app password from stored token
+            if not account.access_token or not account.access_token.startswith("imap:"):
+                raise HTTPException(status_code=400, detail="Account not configured for IMAP access")
+            
+            app_password = account.access_token[5:]  # Remove "imap:" prefix
+            
+            # Create IMAP provider for this account
+            imap_provider = GmailIMAPProvider(
+                email_address=account.email,
+                app_password=app_password
+            )
+            
+            # Search for messages from recent days
+            today = datetime.utcnow().date()
+            start_date = today - timedelta(days=days-1)
+            
+            # Gmail IMAP search for recent messages (since includes the date itself)
+            query = f"since:{start_date.strftime('%Y-%m-%d')}"
+            
+            messages = await imap_provider.search(query)
+            
+            # Limit and sort by date (most recent first)
+            messages = sorted(messages, key=lambda x: x.date, reverse=True)[:limit]
+            
+            # Convert to dict for JSON response
+            result = []
+            for msg in messages:
+                result.append({
+                    "gmail_id": msg.gmail_id,
+                    "thread_id": msg.thread_id,
+                    "date": msg.date.isoformat(),
+                    "from_email": msg.from_email,
+                    "subject": msg.subject,
+                    "snippet": msg.snippet,
+                    "account_email": account.email
+                })
+            
+            return {
+                "account_id": account_id,
+                "account_email": account.email, 
+                "messages_count": len(result),
+                "messages": result
+            }
+            
+        finally:
+            session.close()
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch messages: {str(e)}")
+
+
 @router.get("/auth/status")
 async def auth_status():
     """Check OAuth configuration status."""
@@ -197,6 +410,78 @@ async def auth_status():
         "client_secret_set": bool(GOOGLE_CLIENT_SECRET),
         "redirect_uri": REDIRECT_URI
     }
+
+
+@router.get("/debug/show-messages/{account_id}")
+async def show_messages_debug(account_id: str):
+    """Debug endpoint to show actual message data without processing delays."""
+    try:
+        from ..models.simple_db import get_session, GmailAccount
+        from ..providers.gmail_imap import GmailIMAPProvider
+        from datetime import datetime, timedelta
+        
+        session = get_session()
+        try:
+            account = session.query(GmailAccount).filter_by(account_id=account_id).first()
+            if not account or not account.access_token or not account.access_token.startswith("imap:"):
+                return {"error": f"Account {account_id} not found or not configured for IMAP"}
+            
+            app_password = account.access_token[5:]  # Remove "imap:" prefix
+            
+            imap_provider = GmailIMAPProvider(
+                email_address=account.email,
+                app_password=app_password
+            )
+            
+            # Simple search for last 7 days to ensure we get results
+            today = datetime.utcnow()
+            week_ago = today - timedelta(days=7)
+            query = f"after:{week_ago.strftime('%Y/%m/%d')}"
+            
+            print(f"🔍 DEBUG: Searching {account.email} with {query}")
+            messages = await imap_provider.search(query)
+            print(f"🔍 DEBUG: Raw messages found: {len(messages)}")
+            
+            # Convert first few messages to simple dict format
+            result_messages = []
+            for i, msg in enumerate(messages[:3]):  # Just first 3 messages
+                try:
+                    result_messages.append({
+                        "index": i + 1,
+                        "gmail_id": msg.gmail_id,
+                        "thread_id": msg.thread_id, 
+                        "from_email": msg.from_email,
+                        "subject": msg.subject[:100] if msg.subject else "(No subject)",
+                        "snippet": msg.snippet[:200] if msg.snippet else "",
+                        "date": msg.date.isoformat() if hasattr(msg.date, 'isoformat') else str(msg.date),
+                        "account_email": account.email
+                    })
+                except Exception as e:
+                    result_messages.append({
+                        "index": i + 1,
+                        "error": f"Failed to process message: {str(e)}",
+                        "raw_msg_type": str(type(msg))
+                    })
+            
+            return {
+                "success": True,
+                "account": account.email,
+                "query_used": query,
+                "total_found": len(messages),
+                "messages_shown": len(result_messages),
+                "messages": result_messages
+            }
+            
+        finally:
+            session.close()
+            
+    except Exception as e:
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
 
 
 @router.get("/auth/test/{account_id}")
