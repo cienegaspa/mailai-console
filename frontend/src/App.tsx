@@ -5,6 +5,8 @@ import RunsList from './pages/RunsList'
 import RunDetail from './pages/RunDetail'
 import EvidenceViewer from './pages/EvidenceViewer'
 import Accounts from './pages/Accounts'
+import EmailBrowse from './pages/EmailBrowse'
+import SyncManagement from './pages/SyncManagement'
 
 function App() {
   return (
@@ -12,6 +14,8 @@ function App() {
       <Routes>
         <Route path="/" element={<RunsList />} />
         <Route path="/accounts" element={<Accounts />} />
+        <Route path="/browse" element={<EmailBrowse />} />
+        <Route path="/sync" element={<SyncManagement />} />
         <Route path="/runs/:runId" element={<RunDetail />} />
         <Route path="/runs/:runId/evidence/:threadId" element={<EvidenceViewer />} />
       </Routes>

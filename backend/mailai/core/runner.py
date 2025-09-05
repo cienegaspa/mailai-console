@@ -543,7 +543,20 @@ class RunOrchestrator:
                     from_email=msg.from_email,
                     subject=msg.subject,
                     labels_json=msg.labels,
-                    snippet=msg.snippet
+                    snippet=msg.snippet,
+                    body=msg.body,  # CRITICAL: Save full body content
+                    to_emails_json=getattr(msg, 'to_emails_json', None),
+                    cc_emails_json=getattr(msg, 'cc_emails_json', None),
+                    bcc_emails_json=getattr(msg, 'bcc_emails_json', None),
+                    reply_to_email=getattr(msg, 'reply_to_email', None),
+                    message_size=getattr(msg, 'message_size', None),
+                    has_attachments=getattr(msg, 'has_attachments', False),
+                    attachment_count=getattr(msg, 'attachment_count', 0),
+                    message_id_header=getattr(msg, 'message_id_header', None),
+                    in_reply_to=getattr(msg, 'in_reply_to', None),
+                    references=getattr(msg, 'references', None),
+                    content_type=getattr(msg, 'content_type', None),
+                    is_multipart=getattr(msg, 'is_multipart', False)
                 )
                 session.add(message)
             session.commit()

@@ -48,6 +48,7 @@ from ..providers.interfaces import (
 from ..utils.events import global_event_emitter, global_progress_tracker, RunEvent
 from .auth import router as auth_router
 from .debug import router as debug_router
+from .sync import router as sync_router
 
 
 # Pydantic models for API
@@ -234,9 +235,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include OAuth router
+# Include routers
 app.include_router(auth_router)
 app.include_router(debug_router)
+app.include_router(sync_router)
 
 
 # Dependency to get orchestrator

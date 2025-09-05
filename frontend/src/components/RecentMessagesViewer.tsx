@@ -14,7 +14,13 @@ interface Message {
   from_email: string
   subject: string
   snippet: string
+  body?: string
   account_email: string
+  to_emails?: string[]
+  cc_emails?: string[]
+  has_attachments?: boolean
+  attachment_count?: number
+  message_size?: number
 }
 
 interface RecentMessagesViewerProps {
@@ -167,6 +173,7 @@ export default function RecentMessagesViewer({ isOpen, onClose }: RecentMessages
   const [totalAccounts, setTotalAccounts] = useState(3)
   const [failedAccounts, setFailedAccounts] = useState<string[]>([])
   const [totalMessages, setTotalMessages] = useState(0)
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
   
   // Auto-load messages when modal opens
   useEffect(() => {
@@ -174,6 +181,18 @@ export default function RecentMessagesViewer({ isOpen, onClose }: RecentMessages
       loadMessages()
     }
   }, [isOpen])
+
+  const toggleMessageExpansion = (messageId: string) => {
+    setExpandedMessages(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
   
   const loadMessages = async () => {
     console.log(`🎬 [${new Date().toISOString()}] loadMessages() called - Starting message loading process`)
@@ -310,7 +329,7 @@ export default function RecentMessagesViewer({ isOpen, onClose }: RecentMessages
                     <p className={`text-sm mt-1 ${
                       failedAccounts.length > 0 ? 'text-yellow-700' : 'text-green-700'
                     }`}>
-                      Found {totalMessages} messages from {successfulAccounts}/{totalAccounts} connected accounts
+                      Found {totalMessages} unique messages from {successfulAccounts}/{totalAccounts} connected accounts
                     </p>
                     {failedAccounts.length > 0 && (
                       <p className="text-xs text-yellow-600 mt-1">
@@ -331,40 +350,88 @@ export default function RecentMessagesViewer({ isOpen, onClose }: RecentMessages
               {/* Messages List */}
               {messages.length > 0 ? (
                 <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.gmail_id}
-                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getAccountColor(message.account_email)}`}>
-                              {message.account_email}
-                            </span>
-                            <span className="text-xs text-gray-500 flex items-center">
-                              <CalendarDaysIcon className="h-3 w-3 mr-1" />
-                              {formatDate(message.date)}
-                            </span>
+                  {messages.map((message) => {
+                    const isExpanded = expandedMessages.has(message.gmail_id)
+                    return (
+                      <div
+                        key={message.gmail_id}
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => toggleMessageExpansion(message.gmail_id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getAccountColor(message.account_email)}`}>
+                                {message.account_email}
+                              </span>
+                              <span className="text-xs text-gray-500 flex items-center">
+                                <CalendarDaysIcon className="h-3 w-3 mr-1" />
+                                {formatDate(message.date)}
+                              </span>
+                              {message.has_attachments && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                  📎 {message.attachment_count || 1} attachment{(message.attachment_count || 1) > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <h4 className="text-sm font-medium text-gray-900 truncate">
+                              {message.subject || '(No Subject)'}
+                            </h4>
+                            
+                            <p className="text-sm text-gray-600 mt-1">
+                              From: {message.from_email}
+                            </p>
+                            
+                            {message.to_emails && message.to_emails.length > 0 && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                To: {message.to_emails.join(', ')}
+                              </p>
+                            )}
+                            
+                            {message.cc_emails && message.cc_emails.length > 0 && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                CC: {message.cc_emails.join(', ')}
+                              </p>
+                            )}
+                            
+                            {!isExpanded && message.snippet && (
+                              <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                                {message.snippet.replace(/\r\n/g, ' ').replace(/\s+/g, ' ').trim()}
+                              </p>
+                            )}
+                            
+                            {isExpanded && (
+                              <div className="mt-4 border-t pt-4">
+                                <h5 className="text-sm font-medium text-gray-900 mb-2">Full Message:</h5>
+                                <div className="bg-gray-50 rounded p-3 text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                                  {message.body || message.snippet || 'No content available'}
+                                </div>
+                                
+                                {(message.message_size || message.thread_id) && (
+                                  <div className="mt-3 text-xs text-gray-500 space-y-1">
+                                    {message.message_size && (
+                                      <p>Size: {(message.message_size / 1024).toFixed(1)} KB</p>
+                                    )}
+                                    {message.thread_id && (
+                                      <p>Thread ID: {message.thread_id}</p>
+                                    )}
+                                    <p>Message ID: {message.gmail_id}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                           
-                          <h4 className="text-sm font-medium text-gray-900 truncate">
-                            {message.subject || '(No Subject)'}
-                          </h4>
-                          
-                          <p className="text-sm text-gray-600 mt-1">
-                            From: {message.from_email}
-                          </p>
-                          
-                          {message.snippet && (
-                            <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                              {message.snippet.replace(/\r\n/g, ' ').replace(/\s+/g, ' ').trim()}
-                            </p>
-                          )}
+                          <div className="ml-4 flex items-center">
+                            <span className="text-gray-400">
+                              {isExpanded ? '▲' : '▼'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">

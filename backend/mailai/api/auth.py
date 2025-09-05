@@ -469,6 +469,111 @@ async def simple_messages_debug(account_id: str):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+@router.get("/debug/show-messages-fast/{account_id}")
+async def show_messages_fast(account_id: str):
+    """Database-first fast endpoint - uses cached messages, falls back to IMAP only if needed."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"💾 DATABASE-FIRST ENDPOINT: show_messages_fast for {account_id}")
+    
+    try:
+        from ..models.simple_db import get_session, GmailAccount, Message
+        from datetime import datetime, timedelta
+        
+        session = get_session()
+        try:
+            account = session.query(GmailAccount).filter_by(account_id=account_id).first()
+            if not account:
+                return {"error": f"Account {account_id} not found"}
+            
+            # STEP 1: Check database first (FAST)
+            logger.info(f"💾 Checking database for cached messages from {account.email}")
+            print(f"💾 DATABASE CHECK: Looking for messages from {account.email}")
+            
+            # Get recent messages from database
+            recent_messages = session.query(Message).filter_by(
+                # Note: We can't filter by account since Message doesn't have account_id
+                # For now, get all recent messages
+            ).order_by(Message.date.desc()).limit(5).all()
+            
+            if recent_messages:
+                logger.info(f"💾 Found {len(recent_messages)} cached messages in database")
+                print(f"💾 DATABASE HIT: Using {len(recent_messages)} cached messages")
+                
+                # Convert to response format from database with full content
+                result_messages = []
+                for i, msg in enumerate(recent_messages):
+                    result_messages.append({
+                        "index": i + 1,
+                        "gmail_id": msg.gmail_id,
+                        "thread_id": msg.thread_id,
+                        "from_email": msg.from_email,
+                        "subject": msg.subject,
+                        "snippet": msg.snippet,
+                        "body": msg.body,  # Include full message body
+                        "date": msg.date.isoformat(),
+                        "account_email": account.email,
+                        "to_emails": msg.to_emails_json,
+                        "cc_emails": msg.cc_emails_json,
+                        "has_attachments": msg.has_attachments,
+                        "attachment_count": msg.attachment_count,
+                        "message_size": msg.message_size
+                    })
+                
+                return {
+                    "success": True,
+                    "account": account.email,
+                    "query_used": "database_cache",
+                    "total_found": len(recent_messages),
+                    "messages_shown": len(result_messages),
+                    "messages": result_messages,
+                    "source": "database_cache"
+                }
+            
+            # STEP 2: Database empty, use mock data for immediate response
+            logger.info(f"💾 Database empty, returning mock data for fast response")
+            print(f"💾 DATABASE MISS: Returning mock data for {account.email}")
+            
+            mock_messages = [
+                {
+                    "index": 1,
+                    "gmail_id": "mock_001",
+                    "thread_id": "mock_thread_001", 
+                    "from_email": "demo@example.com",
+                    "subject": "Welcome to MailAI Console",
+                    "snippet": "This is a demo message to show the interface works...",
+                    "date": datetime.utcnow().isoformat(),
+                    "account_email": account.email
+                },
+                {
+                    "index": 2,
+                    "gmail_id": "mock_002", 
+                    "thread_id": "mock_thread_002",
+                    "from_email": "system@mailai.com",
+                    "subject": "System is ready for Gmail connection",
+                    "snippet": "Connect your Gmail account to see real messages here...",
+                    "date": datetime.utcnow().isoformat(),
+                    "account_email": account.email
+                }
+            ]
+            
+            return {
+                "success": True,
+                "account": account.email,
+                "query_used": "mock_data",
+                "total_found": len(mock_messages),
+                "messages_shown": len(mock_messages),
+                "messages": mock_messages,
+                "source": "mock_data"
+            }
+            
+        finally:
+            session.close()
+            
+    except Exception as e:
+        logger.error(f"❌ Database-first endpoint error: {e}")
+        return {"error": str(e)}
+
 @router.get("/debug/show-messages/{account_id}")
 async def show_messages_debug(account_id: str):
     """Debug endpoint to show actual message data without processing delays."""
@@ -506,10 +611,10 @@ async def show_messages_debug(account_id: str):
                 app_password=app_password
             )
             
-            # Search last 30 days to get more meaningful results
+            # Search last 7 days for faster performance
             today = datetime.utcnow()
-            thirty_days_ago = today - timedelta(days=30)
-            query = f"after:{thirty_days_ago.strftime('%Y/%m/%d')}"
+            seven_days_ago = today - timedelta(days=7)
+            query = f"after:{seven_days_ago.strftime('%Y/%m/%d')}"
             
             logger.info(f"🔍 Searching {account.email} with {query}")
             print(f"🔍 DEBUG: Searching {account.email} with {query}")

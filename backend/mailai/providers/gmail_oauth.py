@@ -299,8 +299,21 @@ class GmailOAuthProvider(GmailProvider):
             except:
                 date = datetime.utcnow()
             
-            # Extract body
+            # Extract body and check for attachments
             body = self._extract_body(msg_data['payload'])
+            has_attachments, attachment_count = self._check_attachments(msg_data['payload'])
+            
+            # Extract recipient emails
+            to_emails = self._parse_email_list(headers.get('To', ''))
+            cc_emails = self._parse_email_list(headers.get('Cc', ''))
+            bcc_emails = self._parse_email_list(headers.get('Bcc', ''))
+            
+            # Get message size (approximate from payload)
+            message_size = msg_data.get('sizeEstimate', 0)
+            
+            # Determine content type and multipart status
+            content_type = msg_data['payload'].get('mimeType', 'text/plain')
+            is_multipart = 'parts' in msg_data['payload']
             
             message = Message(
                 gmail_id=message_id,
@@ -310,7 +323,19 @@ class GmailOAuthProvider(GmailProvider):
                 subject=headers.get('Subject', ''),
                 labels=msg_data.get('labelIds', []),
                 body=body,
-                snippet=msg_data.get('snippet', '')
+                snippet=msg_data.get('snippet', ''),
+                to_emails_json=to_emails,
+                cc_emails_json=cc_emails,
+                bcc_emails_json=bcc_emails,
+                reply_to_email=headers.get('Reply-To'),
+                message_size=message_size,
+                has_attachments=has_attachments,
+                attachment_count=attachment_count,
+                message_id_header=headers.get('Message-ID'),
+                in_reply_to=headers.get('In-Reply-To'),
+                references=headers.get('References'),
+                content_type=content_type,
+                is_multipart=is_multipart
             )
             
             return message
@@ -342,6 +367,40 @@ class GmailOAuthProvider(GmailProvider):
                     body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8', errors='ignore')
         
         return body
+    
+    def _check_attachments(self, payload: Dict[str, Any]) -> tuple[bool, int]:
+        """Check if message has attachments and count them."""
+        attachment_count = 0
+        
+        def count_attachments(part: Dict[str, Any]):
+            nonlocal attachment_count
+            if 'parts' in part:
+                for subpart in part['parts']:
+                    count_attachments(subpart)
+            elif part.get('filename') and part['filename'].strip():
+                attachment_count += 1
+            elif part.get('body', {}).get('attachmentId'):
+                attachment_count += 1
+        
+        count_attachments(payload)
+        return attachment_count > 0, attachment_count
+    
+    def _parse_email_list(self, email_str: str) -> List[str]:
+        """Parse comma-separated email list."""
+        if not email_str:
+            return []
+        
+        # Split by comma and clean up
+        emails = []
+        for email in email_str.split(','):
+            email = email.strip()
+            if email:
+                # Extract email from "Name <email@domain.com>" format
+                if '<' in email and '>' in email:
+                    email = email[email.find('<')+1:email.find('>')]
+                emails.append(email)
+        
+        return emails
     
     async def disconnect_account(self, account_id: str) -> bool:
         """Disconnect and remove account."""

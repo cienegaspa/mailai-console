@@ -30,6 +30,24 @@ class Message:
     labels: List[str]
     body: str
     snippet: str
+    
+    # Recipients and threading  
+    to_emails_json: Optional[List[str]] = None
+    cc_emails_json: Optional[List[str]] = None
+    bcc_emails_json: Optional[List[str]] = None
+    reply_to_email: Optional[str] = None
+    
+    # Message metadata
+    message_size: Optional[int] = None
+    has_attachments: bool = False
+    attachment_count: int = 0
+    
+    # Message headers for proper threading
+    message_id_header: Optional[str] = None
+    in_reply_to: Optional[str] = None
+    references: Optional[str] = None
+    content_type: Optional[str] = None
+    is_multipart: bool = False
 
 
 @dataclass
