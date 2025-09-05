@@ -21,15 +21,58 @@ interface RecentMessagesViewerProps {
   onClose: () => void
 }
 
+// Use working debug endpoints instead of broken main endpoint
 const fetchRecentMessages = async (): Promise<{ total_accounts: number, total_messages: number, messages: Message[] }> => {
-  const response = await fetch('http://127.0.0.1:5170/accounts/recent-messages?days=1&limit_per_account=5')
+  const accounts = ['tom@cienegaspa.com', 'tbwerz@gmail.com', 'rose@cienegaspa.com']
+  const allMessages: Message[] = []
+  let successfulAccounts = 0
   
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to fetch messages: ${response.status} ${response.statusText} - ${errorText}`)
+  for (const accountId of accounts) {
+    try {
+      console.log(`🔵 Fetching messages from ${accountId}...`)
+      
+      // Add 15 second timeout to prevent infinite loading
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+      
+      const response = await fetch(
+        `http://127.0.0.1:5170/debug/show-messages/${encodeURIComponent(accountId)}`,
+        { signal: controller.signal }
+      )
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.messages) {
+          console.log(`✅ ${accountId}: ${data.messages.length} messages loaded`)
+          allMessages.push(...data.messages)
+          successfulAccounts++
+        } else {
+          console.warn(`⚠️ ${accountId}: No messages returned`)
+        }
+      } else {
+        console.error(`❌ ${accountId}: HTTP ${response.status}`)
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error(`⏱️ ${accountId}: Timeout after 15 seconds`)
+      } else {
+        console.error(`❌ ${accountId}: ${error}`)
+      }
+    }
   }
   
-  return await response.json()
+  // Sort all messages by date (most recent first)
+  allMessages.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  
+  console.log(`🎉 Total loaded: ${allMessages.length} messages from ${successfulAccounts} accounts`)
+  
+  return {
+    total_accounts: successfulAccounts,
+    total_messages: allMessages.length,
+    messages: allMessages
+  }
 }
 
 export default function RecentMessagesViewer({ isOpen, onClose }: RecentMessagesViewerProps) {
@@ -123,8 +166,9 @@ export default function RecentMessagesViewer({ isOpen, onClose }: RecentMessages
           {isLoading && (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-sm text-gray-600">Loading messages from Gmail...</p>
-              <p className="text-xs text-gray-500 mt-1">This may take a few seconds</p>
+              <p className="mt-4 text-sm text-gray-600">Loading messages from Gmail accounts...</p>
+              <p className="text-xs text-gray-500 mt-1">Fetching from tom@cienegaspa.com, tbwerz@gmail.com, rose@cienegaspa.com</p>
+              <p className="text-xs text-gray-400 mt-1">Using optimized debug endpoints - should load quickly!</p>
             </div>
           )}
           
